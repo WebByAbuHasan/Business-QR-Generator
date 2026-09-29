@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business QR Generator</title>
+<style>
+:root{--bg:#f3f6f6;--card:#fff;--ink:#14212b;--mute:#5b6b76;--line:#d9e1e4;--acc:#0e7a6b;--accd:#0a5f53;--err:#b42318;--warn:#8a5a00;--r:10px;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1519;--card:#16212a;--ink:#e8eef1;--mute:#93a4ae;--line:#2a3a45;--acc:#2fb5a2;--accd:#4cc9b6;--err:#ff8a80;--warn:#f0b957}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header,main,footer{max-width:1040px;margin:0 auto;padding:0 20px}
+header{padding-top:32px;padding-bottom:20px}
+h1{margin:0 0 4px;font-size:1.75rem;letter-spacing:-.02em}
+header p{margin:0;color:var(--mute)}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:0 1px 2px rgba(20,33,43,.05)}
+.card+.card{margin-top:20px}
+h2{font-size:1rem;margin:0 0 12px}
+label,.lbl{display:block;font-size:.875rem;font-weight:600;margin:12px 0 4px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:110px;resize:vertical}
+input[type=color]{padding:2px;height:42px;cursor:pointer}
+input[type=range]{padding:0;accent-color:var(--acc)}
+input[type=checkbox]{width:auto;margin-right:8px}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{font:inherit;font-size:.875rem;font-weight:600;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--mute);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:.8125rem;color:var(--mute);margin:4px 0 0}
+.msg{min-height:1.4em;margin:10px 0 0;font-size:.875rem}
+.msg.err{color:var(--err)}.msg.warn{color:var(--warn)}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:12px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;min-height:44px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;width:100%;margin-top:16px}
+.btn.pri:hover:not(:disabled){background:var(--accd)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.actions .wide{grid-column:1/-1}
+.stage{display:flex;align-items:center;justify-content:center;min-height:300px;border:1px dashed var(--line);border-radius:8px;padding:14px;background:var(--bg)}
+.stage canvas{max-width:100%;height:auto;image-rendering:pixelated;border-radius:4px;display:block}
+.empty{text-align:center;color:var(--mute);max-width:240px}
+.empty strong{display:block;color:var(--ink);margin-bottom:4px}
+.meta{font-size:.8125rem;color:var(--mute);text-align:center;margin:10px 0 0}
+.priv{font-size:.8125rem;color:var(--mute);margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line)}
+footer{padding-top:20px;padding-bottom:32px;font-size:.8125rem;color:var(--mute)}
+[hidden]{display:none!important}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Business QR Generator</h1>
+  <p>Turn links, contacts, and Wi-Fi details into QR codes you can print or share. Works fully offline.</p>
+</header>
+<main>
+<div class="grid">
+  <div>
+    <section class="card" aria-labelledby="h-content">
+      <h2 id="h-content">1. Choose content</h2>
+      <div class="tabs" role="tablist" aria-label="Content type">
+        <button role="tab" id="tab-text" data-t="text" aria-selected="true" aria-controls="p-text">Link or text</button>
+        <button role="tab" id="tab-phone" data-t="phone" aria-selected="false" aria-controls="p-phone">Phone</button>
+        <button role="tab" id="tab-email" data-t="email" aria-selected="false" aria-controls="p-email">Email</button>
+        <button role="tab" id="tab-wa" data-t="wa" aria-selected="false" aria-controls="p-wa">WhatsApp</button>
+        <button role="tab" id="tab-wifi" data-t="wifi" aria-selected="false" aria-controls="p-wifi">Wi-Fi</button>
+      </div>
+
+      <div id="p-text" role="tabpanel" aria-labelledby="tab-text">
+        <label for="text">Website, social profile URL, or any text</label>
+        <textarea id="text" placeholder="https://yourbusiness.com"></textarea>
+        <p class="hint">Paste a website or social media profile link (Instagram, Facebook, LinkedIn…) or type plain text.</p>
+      </div>
+      <div id="p-phone" role="tabpanel" aria-labelledby="tab-phone" hidden>
+        <label for="phone">Phone number with country code</label>
+        <input id="phone" type="tel" inputmode="tel" placeholder="+8801712345678">
+      </div>
+      <div id="p-email" role="tabpanel" aria-labelledby="tab-email" hidden>
+        <label for="em">Email address</label>
+        <input id="em" type="email" placeholder="hello@yourbusiness.com">
+        <label for="es">Subject (optional)</label>
+        <input id="es" type="text">
+        <label for="eb">Message (optional)</label>
+        <input id="eb" type="text">
+      </div>
+      <div id="p-wa" role="tabpanel" aria-labelledby="tab-wa" hidden>
+        <label for="wn">WhatsApp number with country code</label>
+        <input id="wn" type="tel" inputmode="tel" placeholder="8801712345678">
+        <label for="wm">Prefilled message (optional)</label>
+        <input id="wm" type="text" placeholder="Hi, I'd like to know more">
+      </div>
+      <div id="p-wifi" role="tabpanel" aria-labelledby="tab-wifi" hidden>
+        <label for="ws">Network name (SSID)</label>
+        <input id="ws" type="text" autocomplete="off">
+        <div class="row">
+          <div><label for="wp">Password</label><input id="wp" type="text" autocomplete="off"></div>
+          <div><label for="wt">Security</label>
+            <select id="wt"><option value="WPA">WPA/WPA2/WPA3</option><option value="WEP">WEP</option><option value="nopass">None</option></select></div>
+        </div>
+        <label><input id="wh" type="checkbox">Hidden network</label>
+      </div>
+      <p id="msg" class="msg" role="status" aria-live="polite"></p>
+      <button class="btn pri" id="gen" type="button">Generate QR code</button>
+    </section>
+
+    <section class="card" aria-labelledby="h-style">
+      <h2 id="h-style">2. Customize</h2>
+      <div class="row">
+        <div><label for="fg">Code color</label><input id="fg" type="color" value="#14212b"></div>
+        <div><label for="bg">Background color</label><input id="bg" type="color" value="#ffffff"></div>
+      </div>
+      <div class="row">
+        <div><label for="size">Size: <output id="sizeO">320</output> px</label><input id="size" type="range" min="128" max="1024" step="32" value="320"></div>
+        <div><label for="mg">Quiet zone: <output id="mgO">4</output> modules</label><input id="mg" type="range" min="0" max="8" step="1" value="4"></div>
+      </div>
+      <label for="ecl">Error correction</label>
+      <select id="ecl">
+        <option value="0">Low (7%) – smallest code</option>
+        <option value="1" selected>Medium (15%) – recommended</option>
+        <option value="2">Quartile (25%)</option>
+        <option value="3">High (30%) – most damage-tolerant</option>
+      </select>
+      <p class="hint">Use a dark code on a light background and keep a quiet zone of 4 for the most reliable scans.</p>
+    </section>
+  </div>
+
+  <aside class="card" aria-labelledby="h-prev">
+    <h2 id="h-prev">3. Preview and download</h2>
+    <div class="stage">
+      <div class="empty" id="empty"><strong>No QR code yet</strong>Enter your content on the left and your code appears here.</div>
+      <canvas id="cv" hidden aria-label="Generated QR code"></canvas>
+    </div>
+    <p class="meta" id="info">&nbsp;</p>
+    <div class="actions">
+      <button class="btn" id="png" type="button" disabled>Download PNG</button>
+      <button class="btn" id="svg" type="button" disabled>Download SVG</button>
+      <button class="btn wide" id="copy" type="button" disabled>Copy content</button>
+      <button class="btn wide" id="reset" type="button">Clear and reset</button>
+    </div>
+    <p class="priv"><strong>Private by design.</strong> Your content is processed in this browser only. Nothing is uploaded to a server.</p>
+  </aside>
+</div>
+</main>
+<footer>Business QR Generator · Test-scan every code before you print it.</footer>
+
+<script>
+/* ============================================================
+   QR CODE ENCODER (embedded, no dependencies)
+   Byte mode (UTF-8), versions 1-40, error correction L/M/Q/H.
+   Steps: pick version -> build bit stream -> Reed-Solomon ECC
+   -> interleave blocks -> place modules -> choose best mask.
+   ============================================================ */
+const QR = (() => {
+  // Error-correction codewords per block / number of blocks, index [level L,M,Q,H][version]
+  const ECCW = [
+    [0,7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    [0,10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28],
+    [0,13,22,18,26,18,24,18,22,20,24,28,26,24,20,30,24,28,28,26,30,28,30,30,30,30,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    [0,17,28,22,16,22,28,26,26,24,28,24,28,22,24,24,30,28,28,26,28,30,24,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]];
+  const NB = [
+    [0,1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+    [0,1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49],
+    [0,1,1,2,2,4,4,6,6,8,8,8,10,12,16,12,17,16,18,21,20,23,23,25,27,29,34,34,35,38,40,43,45,48,51,53,56,59,62,65,68],
+    [0,1,1,2,4,4,4,5,6,8,8,11,11,16,16,18,16,19,21,25,25,25,34,30,32,35,37,40,42,45,48,51,54,57,60,63,66,70,74,77,81]];
+  const FMT = [1, 0, 3, 2]; // format-info bits for L, M, Q, H
+
+  // Total data+ECC bits available in a version (after function patterns)
+  function rawModules(v) {
+    let r = (16 * v + 128) * v + 64;
+    if (v >= 2) { const a = Math.floor(v / 7) + 2; r -= (25 * a - 10) * a - 55; if (v >= 7) r -= 36; }
+    return r;
+  }
+  // Multiplication in GF(256) with polynomial 0x11D
+  function gmul(x, y) {
+    let z = 0;
+    for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; }
+    return z;
+  }
+  function rsDivisor(deg) {
+    const r = Array(deg).fill(0); r[deg - 1] = 1; let root = 1;
+    for (let i = 0; i < deg; i++) {
+      for (let j = 0; j < deg; j++) { r[j] = gmul(r[j], root); if (j + 1 < deg) r[j] ^= r[j + 1]; }
+      root = gmul(root, 2);
+    }
+    return r;
+  }
+  function rsRemainder(data, div) {
+    const r = Array(div.length).fill(0);
+    for (const b of data) {
+      const f = b ^ r.shift(); r.push(0);
+      div.forEach((c, i) => { r[i] ^= gmul(c, f); });
+    }
+    return r;
+  }
+
+  function encode(text, ecl) {
+    const bytes = Array.from(new TextEncoder().encode(text));
+    // 1. Smallest version whose capacity fits the data
+    let ver, cap;
+    for (ver = 1; ; ver++) {
+      if (ver > 40) throw new Error("Content is too long for a QR code at this error-correction level. Shorten it or choose Low.");
+      cap = Math.floor(rawModules(ver) / 8) - ECCW[ecl][ver] * NB[ecl][ver];
+      if (4 + (ver < 10 ? 8 : 16) + bytes.length * 8 <= cap * 8) break;
+    }
+    // 2. Bit stream: mode(0100) + length + bytes + terminator + padding
+    const bits = [];
+    const put = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+    put(4, 4); put(bytes.length, ver < 10 ? 8 : 16);
+    bytes.forEach(b => put(b, 8));
+    put(0, Math.min(4, cap * 8 - bits.length));
+    while (bits.length % 8) bits.push(0);
+    for (let pad = 0xEC; bits.length < cap * 8; pad ^= 0xEC ^ 0x11) put(pad, 8);
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) data.push(parseInt(bits.slice(i, i + 8).join(""), 2));
+
+    // 3. Split into blocks, add Reed-Solomon ECC, interleave
+    const nb = NB[ecl][ver], eccLen = ECCW[ecl][ver];
+    const raw = Math.floor(rawModules(ver) / 8);
+    const nShort = nb - raw % nb, shortLen = Math.floor(raw / nb);
+    const div = rsDivisor(eccLen), blocks = [];
+    for (let i = 0, k = 0; i < nb; i++) {
+      const d = data.slice(k, k + shortLen - eccLen + (i < nShort ? 0 : 1)); k += d.length;
+      const e = rsRemainder(d, div);
+      if (i < nShort) d.push(0);
+      blocks.push(d.concat(e));
+    }
+    const all = [];
+    for (let i = 0; i < blocks[0].length; i++)
+      blocks.forEach((b, j) => { if (i !== shortLen - eccLen || j >= nShort) all.push(b[i]); });
+
+    // 4. Draw function patterns
+    const size = ver * 4 + 17;
+    const m = Array.from({ length: size }, () => Array(size).fill(false));
+    const fn = Array.from({ length: size }, () => Array(size).fill(false));
+    const set = (x, y, v) => { m[y][x] = v; fn[y][x] = true; };
+    for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); } // timing
+    const finder = (cx, cy) => {
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const x = cx + dx, y = cy + dy, d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4);
+      }
+    };
+    finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+    if (ver > 1) { // alignment patterns
+      const n = Math.floor(ver / 7) + 2;
+      const step = ver === 32 ? 26 : Math.ceil((ver * 4 + 4) / (n * 2 - 2)) * 2;
+      const pos = [6];
+      for (let p = size - 7; pos.length < n; p -= step) pos.splice(1, 0, p);
+      pos.forEach((py, i) => pos.forEach((px, j) => {
+        if ((i === 0 && j === 0) || (i === 0 && j === n - 1) || (i === n - 1 && j === 0)) return;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+          set(px + dx, py + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      }));
+    }
+    const formatBits = (mask) => {
+      const d = (FMT[ecl] << 3) | mask; let r = d;
+      for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);
+      const bits15 = ((d << 10) | r) ^ 0x5412, b = i => ((bits15 >>> i) & 1) !== 0;
+      for (let i = 0; i <= 5; i++) set(8, i, b(i));
+      set(8, 7, b(6)); set(8, 8, b(7)); set(7, 8, b(8));
+      for (let i = 9; i < 15; i++) set(14 - i, 8, b(i));
+      for (let i = 0; i < 8; i++) set(size - 1 - i, 8, b(i));
+      for (let i = 8; i < 15; i++) set(8, size - 15 + i, b(i));
+      set(8, size - 8, true); // always-dark module
+    };
+    formatBits(0);
+    if (ver >= 7) { // version information blocks
+      let r = ver;
+      for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+      const v18 = (ver << 12) | r;
+      for (let i = 0; i < 18; i++) {
+        const c = ((v18 >>> i) & 1) !== 0, a = size - 11 + i % 3, b = Math.floor(i / 3);
+        set(a, b, c); set(b, a, c);
+      }
+    }
+
+    // 5. Place data bits in the zig-zag pattern
+    for (let i = 0, right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+        const x = right - j, y = ((right + 1) & 2) === 0 ? size - 1 - vert : vert;
+        if (!fn[y][x] && i < all.length * 8) { m[y][x] = ((all[i >>> 3] >>> (7 - (i & 7))) & 1) !== 0; i++; }
+      }
+    }
+
+    // 6. Try all 8 masks, keep the one with the lowest penalty
+    const mask = (k) => {
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        if (fn[y][x]) continue;
+        const inv = [(x + y) % 2 === 0, y % 2 === 0, x % 3 === 0, (x + y) % 3 === 0,
+          (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, x * y % 2 + x * y % 3 === 0,
+          (x * y % 2 + x * y % 3) % 2 === 0, ((x + y) % 2 + x * y % 3) % 2 === 0][k];
+        if (inv) m[y][x] = !m[y][x];
+      }
+    };
+    const penalty = () => { // long runs, 2x2 blocks, dark/light balance
+      let p = 0, dark = 0;
+      for (let t = 0; t < 2; t++) for (let a = 0; a < size; a++) {
+        let run = 1;
+        for (let b = 1; b < size; b++) {
+          const c = t ? m[b][a] : m[a][b], d = t ? m[b - 1][a] : m[a][b - 1];
+          if (c === d) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1;
+        }
+      }
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        if (m[y][x]) dark++;
+        if (x < size - 1 && y < size - 1 && m[y][x] === m[y][x + 1] && m[y][x] === m[y + 1][x] && m[y][x] === m[y + 1][x + 1]) p += 3;
+      }
+      return p + (Math.ceil(Math.abs(dark * 20 - size * size * 10) / (size * size)) - 1) * 10;
+    };
+    let best = 0, bestP = Infinity;
+    for (let k = 0; k < 8; k++) {
+      mask(k); formatBits(k);
+      const p = penalty(); if (p < bestP) { bestP = p; best = k; }
+      mask(k);
+    }
+    mask(best); formatBits(best);
+    return { size, version: ver, get: (x, y) => m[y][x] };
+  }
+  return { encode };
+})();
+
+/* ============================================================
+   APP LOGIC
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const DEFAULTS = { fg: "#14212b", bg: "#ffffff", size: 320, mg: 4, ecl: 1 };
+let tab = "text", qr = null, content = "";
+
+// Read the active tab and build the QR payload (or a validation error)
+function build() {
+  const v = id => $(id).value.trim();
+  switch (tab) {
+    case "text": return { value: $("text").value.trim() };
+    case "phone": {
+      if (!v("phone")) return { value: "" };
+      const n = v("phone").replace(/[^\d+]/g, "");
+      return /^\+?\d{5,15}$/.test(n) ? { value: "tel:" + n } : { error: "Enter a valid phone number, for example +8801712345678." };
+    }
+    case "email": {
+      if (!v("em")) return { value: "" };
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v("em"))) return { error: "Enter a valid email address, for example hello@yourbusiness.com." };
+      const q = [];
+      if (v("es")) q.push("subject=" + encodeURIComponent(v("es")));
+      if (v("eb")) q.push("body=" + encodeURIComponent(v("eb")));
+      return { value: "mailto:" + v("em") + (q.length ? "?" + q.join("&") : "") };
+    }
+    case "wa": {
+      if (!v("wn")) return { value: "" };
+      const n = v("wn").replace(/\D/g, "");
+      if (n.length < 7 || n.length > 15) return { error: "Enter the WhatsApp number with country code, for example 8801712345678." };
+      return { value: "https://wa.me/" + n + (v("wm") ? "?text=" + encodeURIComponent(v("wm")) : "") };
+    }
+    case "wifi": {
+      if (!v("ws")) return { value: "" };
+      const t = $("wt").value, esc = s => s.replace(/([\\;,:"])/g, "\\$1");
+      if (t !== "nopass" && !$("wp").value) return { error: "Enter the Wi-Fi password, or set Security to None." };
+      return { value: "WIFI:T:" + t + ";S:" + esc($("ws").value) + ";" + (t !== "nopass" ? "P:" + esc($("wp").value) + ";" : "") + ($("wh").checked ? "H:true;" : "") + ";" };
+    }
+  }
+}
+
+function lum(hex) {
+  const c = [1, 3, 5].map(i => parseInt(hex.substr(i, 2), 16) / 255)
+    .map(x => x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4));
+  return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+}
+
+function setMsg(text, cls) { $("msg").textContent = text || ""; $("msg").className = "msg " + (cls || ""); }
+
+function render() {
+  const r = build(), size = +$("size").value, mg = +$("mg").value;
+  $("sizeO").textContent = size; $("mgO").textContent = mg;
+  qr = null; content = "";
+  if (r.error) setMsg(r.error, "err");
+  else if (!r.value) setMsg("");
+  else {
+    try { qr = QR.encode(r.value, +$("ecl").value); content = r.value; setMsg(""); }
+    catch (e) { setMsg(e.message, "err"); }
+  }
+  const ok = !!qr;
+  $("cv").hidden = !ok; $("empty").hidden = ok;
+  ["png", "svg", "copy"].forEach(id => { $(id).disabled = !ok; });
+  if (!ok) { $("info").innerHTML = "&nbsp;"; return; }
+  draw($("cv"), size, mg);
+  $("info").textContent = "Version " + qr.version + " · " + qr.size + "×" + qr.size + " modules · " + size + "×" + size + " px";
+  // Scannability warnings (non-blocking)
+  const lf = lum($("fg").value), lb = lum($("bg").value);
+  const ratio = (Math.max(lf, lb) + .05) / (Math.min(lf, lb) + .05);
+  if (lf > lb) setMsg("Light code on a dark background – many scanners can't read inverted codes.", "warn");
+  else if (ratio < 3) setMsg("Low contrast between code and background – this may not scan. Pick a darker code color.", "warn");
+}
+
+// Paint the QR onto a canvas; edges are rounded to whole pixels so it stays sharp
+function draw(cv, px, mg) {
+  const total = qr.size + 2 * mg, ctx = cv.getContext("2d");
+  cv.width = cv.height = px;
+  ctx.fillStyle = $("bg").value; ctx.fillRect(0, 0, px, px);
+  ctx.fillStyle = $("fg").value;
+  const e = i => Math.round(i * px / total);
+  for (let y = 0; y < qr.size; y++) for (let x = 0; x < qr.size; x++)
+    if (qr.get(x, y)) ctx.fillRect(e(x + mg), e(y + mg), e(x + mg + 1) - e(x + mg), e(y + mg + 1) - e(y + mg));
+}
+
+function save(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+$("png").onclick = () => {
+  if (!qr) return;
+  const c = document.createElement("canvas");
+  draw(c, +$("size").value, +$("mg").value);
+  c.toBlob(b => save(b, "business-qr.png"), "image/png");
+};
+
+// SVG: one path of unit squares in a viewBox measured in modules, so it scales without blur
+$("svg").onclick = () => {
+  if (!qr) return;
+  const mg = +$("mg").value, total = qr.size + 2 * mg; let d = "";
+  for (let y = 0; y < qr.size; y++) for (let x = 0; x < qr.size; x++)
+    if (qr.get(x, y)) d += "M" + (x + mg) + " " + (y + mg) + "h1v1h-1z";
+  const s = '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + total + " " + total +
+    '" width="' + $("size").value + '" height="' + $("size").value + '" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="' +
+    $("bg").value + '"/><path fill="' + $("fg").value + '" d="' + d + '"/></svg>';
+  save(new Blob([s], { type: "image/svg+xml" }), "business-qr.svg");
+};
+
+$("copy").onclick = async () => {
+  if (!content) return;
+  try { await navigator.clipboard.writeText(content); }
+  catch (e) { // fallback for file:// pages where the Clipboard API may be blocked
+    const t = document.createElement("textarea"); t.value = content; document.body.appendChild(t); t.select();
+    try { document.execCommand("copy"); } catch (_) { setMsg("Copy isn't supported in this browser.", "err"); t.remove(); return; }
+    t.remove();
+  }
+  setMsg("Content copied to clipboard.");
+};
+
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.t === t));
+  document.querySelectorAll("[role=tabpanel]").forEach(p => { p.hidden = p.id !== "p-" + t; });
+  render();
+}
+document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => setTab(b.dataset.t); });
+
+$("gen").onclick = () => {
+  render();
+  if (!qr && !$("msg").textContent) setMsg("Enter some content first, then generate your QR code.", "err");
+};
+document.addEventListener("input", render);
+
+$("reset").onclick = () => {
+  document.querySelectorAll("input[type=text],input[type=tel],input[type=email],textarea").forEach(i => { i.value = ""; });
+  $("wh").checked = false; $("wt").value = "WPA";
+  Object.keys(DEFAULTS).forEach(k => { $(k).value = DEFAULTS[k]; });
+  setTab("text");
+};
+
+render();
+</script>
+</body>
+</html>
